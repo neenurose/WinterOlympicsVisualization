@@ -18,3 +18,6 @@ data_bubble_year_country.json
 # Main html file: 
 bubble_test.html
 
+# Youtube link to the visualization:
+https://youtu.be/3dOxNsz5gOA
+

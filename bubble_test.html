@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.node {
+  cursor: pointer;
+}
+
+.node1 {
+  cursor: pointer;
+}
+.node2 {
+  cursor: pointer;
+  fill: #f6e88f !important;
+}
+.node3 {
+  cursor: pointer;
+  fill: #bcdd85 !important;
+}
+.node4 {
+  cursor: pointer;
+  fill: #f9ff9b !important;
+}
+
+.node1:hover {
+  stroke: #000;
+  stroke-width: 1.5px;
+}
+.node2:hover {
+  stroke: #000;
+  stroke-width: 1.5px;
+}
+.node3:hover {
+  stroke: #000;
+  stroke-width: 1.5px;
+}
+.node4:hover {
+  stroke: #000;
+  stroke-width: 1.5px;
+}
+
+.node--leaf {
+  fill: white;
+  cursor: default;
+}
+.node--leafGold {
+  fill: url('#bg_gold');
+  cursor: default;
+}
+.node--leafSilver {
+  fill: url('#bg_silver');
+  cursor: default;
+}
+.node--leafBronze {
+  fill: url('#bg_bronze');
+  cursor: default;
+}
+
+.label {
+  font: 18px "Helvetica Neue", Helvetica, Arial, sans-serif;
+  text-anchor: middle;
+  text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, -1px 0 0 #fff, 0 -1px 0 #fff;
+  fill: black;
+}
+
+.label,
+.node--root,
+.node--leaf {
+  pointer-events: none;
+}
+
+#filters{
+
+    float: right;
+    position: absolute;
+    top: 50%;
+    right: 120px;
+
+}
+svg{
+  float:left;
+}
+
+#year_div{
+  display: none;
+}
+#country_div{
+  display: none;
+}
+h1{
+  float:left;
+}
+#image_id{
+  float:left;
+}
+
+
+</style>
+
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<body>
+  <div id="heading_id"><img src = "winter_olympics.png" id = "image_id" height="10%"" width="10%" /><h1>Winter Olympics Visualization</h1></div><br/>
+  <div id = "filters">
+  <div id = "discipline_div">Select the discipline of your interest: <br/><select id="searchBox"><option value="" selected>Please select</option></select></div><br/>
+
+  <div id = "year_div">Select the year you are interested in: <br/><select id="yearSearchBox"><option value="" selected>Please select</option></select></div><br/><br/>
+
+  <div id = "country_div">Select the country you want explore: <br/><select id="countrySearchBox"><option value="" selected>Please select</option></select></div><br/><br/>
+</div>
+  <svg width="960" height="960"></svg>
+</body>
+<script>
+
+var svg = d3.select("svg"),
+    margin = 20,
+    diameter = +svg.attr("width"),
+    g = svg.append("g").attr("transform", "translate(" + diameter / 2 + "," + diameter / 2 + ")");
+
+var color = d3.scaleLinear()
+    .domain([-1, 5])
+    .range(["hsl(196, 40%, 82%)", "hsl(0, 0%, 100%)"])
+    .interpolate(d3.interpolateHcl);
+
+var pack = d3.pack()
+    .size([diameter - margin, diameter - margin])
+    .padding(2);
+
+d3.json("data_bubble_year_country.json", function(error, root) {
+  if (error) throw error;
+
+  root = d3.hierarchy(root)
+      .sum(function(d) { return d.size; })
+      .sort(function(a, b) { return b.value - a.value; });
+
+  var focus = root,
+      nodes = pack(root).descendants(),
+      view;
+
+  var defs = svg.append("defs")
+                 .append("pattern")
+                 .attr("id", "bg_gold")
+                 .attr("height","100%")
+                 .attr("width","100%")
+                 .attr("patternContentUnits", "objectBoundingBox")
+                 .append("image")
+                 .attr("xlink:href", "goldMedal.jpeg")
+                 .attr("height",1)
+                 .attr("width",1);
+   svg.append("defs")
+       .append("pattern")
+       .attr("id", "bg_silver")
+       .attr("height","100%")
+       .attr("width","100%")
+       .attr("patternContentUnits", "objectBoundingBox")
+       .append("image")
+       .attr("xlink:href", "silverMedal.png")
+       .attr("height",1)
+       .attr("width",1);
+   svg.append("defs")
+       .append("pattern")
+       .attr("id", "bg_bronze")
+       .attr("height","100%")
+       .attr("width","100%")
+       .attr("patternContentUnits", "objectBoundingBox")
+       .append("image")
+       .attr("xlink:href", "bronzeMedal.jpg")
+       .attr("height",1)
+       .attr("width",1);
+
+  var circle = g.selectAll("circle")
+    .data(nodes)
+    .enter().append("circle")
+      .attr("class", function(d) { return d.parent ? d.children ? "node"+d.depth : "node node--leaf"+d.data.name : "node node--root"; })
+      .style("fill", function(d) { return d.children ? color(d.depth) : null; })
+      .on("click", function(d) { if (focus !== d) zoom(d), d3.event.stopPropagation(); })
+      //.append("svg:title")
+      //.text(function(d){return d.data.size});
+      .on("mouseover", function(d){ 
+        var tooltip = g.selectAll("circle").append("title")
+                        .style("position","absolute").text(function(d){
+                          if(d.depth == 5)
+                            return d.data.size+" "+d.data.name+" medals";
+                          else
+                            return d.data.name;
+                        })
+        });
+
+
+
+  var text = g.selectAll("text")
+    .data(nodes)
+    .enter().append("text")
+      .attr("class", "label")
+      .style("fill-opacity", function(d) { return d.parent === root ? 1 : 0; })
+      .style("display", function(d) { return d.parent === root ? "inline" : "none"; })
+      .text(function(d) { return d.data.name; });
+
+  var node = g.selectAll("circle,text");
+
+  svg
+      .style("background", color(6))
+      .on("click", function() { zoom(root); });
+
+  zoomTo([root.x, root.y, root.r * 2 + margin]);
+
+  function zoom(d) {
+    var focus0 = focus; focus = d;
+    //console.log(d);
+    
+
+    var transition = d3.transition()
+        .duration(d3.event.altKey ? 7500 : 750)
+        .tween("zoom", function(d) {
+          var i = d3.interpolateZoom(view, [focus.x, focus.y, focus.r * 2 + margin]);
+          return function(t) { 
+            //console.log("value of t");
+            //console.log(t)
+            zoomTo(i(t)); };
+        });
+
+    transition.selectAll("text")
+      .filter(function(d) { 
+        return d.parent === focus || this.style.display === "inline"; })
+        .style("fill-opacity", function(d) { return d.parent === focus ? 1 : 0; })
+        .on("start", function(d) { if (d.parent === focus) { this.style.display = "inline";} })
+        .on("end", function(d) { if (d.parent !== focus) this.style.display = "none"; });
+  }
+
+  function zoomTo(v) {
+    //console.log(v);
+    var k = diameter / v[2]; view = v;
+    node.attr("transform", function(d) { return "translate(" + (d.x - v[0]) * k + "," + (d.y - v[1]) * k + ")"; });
+    circle.attr("r", function(d) { return d.r * k; });
+  }
+
+  //Create drop-down options - for selecting discipline
+  var options = nodes.map(function(d) { 
+    if(d.depth==1 && d.data.name!="undefined"){
+      console.log(d.data.name);
+      return d.data.name;
+    }
+    else{
+      console.log("else")
+      return null;
+    }
+      
+     });
+
+  
+  
+  var select = document.getElementById("searchBox"); 
+  //Put new options into select box
+  for(var i = 0; i < options.length; i++) {
+    if(options[i]!=null){
+      var opt = options[i];
+      var el = document.createElement("option");
+      el.textContent = opt;
+      el.value = opt;
+      select.appendChild(el);
+    }
+    
+  }
+
+
+  //Create search combo box
+  //$('.combobox').combobox();
+  
+  //Function to call once the search box is filled in
+  searchEvent = function(d) { 
+    //console.log("inside");
+    //console.log(focus);
+    //console.log(d);
+    if (focus !== d) zoom(d), d3.event.stopPropagation(); 
+  }//searchEvent
+
+
+  d3.select('#searchBox')
+      .on("change", function () {
+
+        var element = document.getElementById('yearSearchBox');
+        if(element!=null)
+          var count = element.childNodes.length;
+          for (var i = 1; count>1; count--) {
+            element.removeChild(element.childNodes[i]);
+               }
+
+        var sect = document.getElementById("searchBox");
+        var section = sect.options[sect.selectedIndex].value;
+
+        var zoom_data = nodes.map(function(d) { 
+        if(d.depth==2 && d.data.name==section){
+          data = searchEvent(d);
+          return d;
+        }
+
+       
+        });
+
+        //Create drop-down options - for selecting year
+        var options_year = nodes.map(function(d) { 
+        if(d.depth==3 && d.parent.data.name == section && d.data.name!="undefined"){
+          console.log(d.data.name);
+          return d.data.name;
+        }
+        else{
+          console.log("else year")
+          return null;
+        }
+      
+        });   
+        var select_year = document.getElementById("yearSearchBox"); 
+        //Put new options into select box
+        for(var i = 0; i < options_year.length; i++) {
+          if(options_year[i]!=null){
+            var opt_year = options_year[i];
+            var el_year = document.createElement("option");
+            el_year.setAttribute('id','year_id')
+            el_year.textContent = opt_year;
+            el_year.value = opt_year;
+            select_year.appendChild(el_year);
+          }
+        }
+
+        document.getElementById("year_div").style.display = "inline";
+             
+
+      });
+
+  d3.select('#yearSearchBox')
+      .on("change", function () {
+
+        var element = document.getElementById('countrySearchBox');
+        if(element!=null)
+          var count = element.childNodes.length;
+          for (var i = 1; count>1; count--) {
+            element.removeChild(element.childNodes[i]);
+               }
+
+        var sect = document.getElementById("yearSearchBox");
+        var section = sect.options[sect.selectedIndex].value;
+
+        var sect_discipline = document.getElementById("searchBox");
+        var section_discipline = sect_discipline.options[sect_discipline.selectedIndex].value;
+
+        var zoom_data = nodes.map(function(d) { 
+        if(d.depth==3 && d.data.name==section && d.parent.data.name == section_discipline){
+          data = searchEvent(d);
+          return d;
+        }
+        }); 
+        //Create drop-down options - for selecting country
+        var options_country = nodes.map(function(d) {
+          if(d.depth==4 && d.parent.data.name == section && d.parent.parent.data.name == section_discipline && d.data.name!="undefined"){
+            //console.log(d)
+            console.log(d.data.name);
+            return d.data.name;
+          }
+          else{
+            //console.log("else")
+            return null;
+          }
+           });
+        
+        var select_country = document.getElementById("countrySearchBox"); 
+        //Put new options into select box
+        for(var i = 0; i < options_country.length; i++) {
+          if(options_country[i]!=null){
+            var opt_country = options_country[i];
+            var el_country = document.createElement("option");
+            el_country.setAttribute('id','country_id')
+            el_country.textContent = opt_country;
+            el_country.value = opt_country;
+            select_country.appendChild(el_country);
+          }
+          
+        }
+
+        document.getElementById("country_div").style.display = "inline";  
+
+      });
+
+  d3.select('#countrySearchBox')
+      .on("change", function () {
+
+        var sect = document.getElementById("countrySearchBox");
+        var section = sect.options[sect.selectedIndex].value;
+
+        var sect_year = document.getElementById("yearSearchBox");
+        var section_year = sect_year.options[sect_year.selectedIndex].value;
+
+        var sect_discipline = document.getElementById("searchBox");
+        var section_discipline = sect_discipline.options[sect_discipline.selectedIndex].value;
+
+        var zoom_data = nodes.map(function(d) { 
+        if(d.depth==4 && d.data.name==section && d.parent.data.name == section_year && d.parent.parent.data.name == section_discipline){
+          data = searchEvent(d);
+          return d;
+        }
+        });  
+      });
+
+
+
+});
+
+</script>
